@@ -19,5 +19,5 @@ export const links: Links = {
   email: "sanketdesai.work@gmail.com",
   phone: "+91 9823595553",
   location: "Pune, Maharashtra",
-  resume: "/resume.pdf",
+  resume: "/Sanket Desai Resume.pdf",
 };
