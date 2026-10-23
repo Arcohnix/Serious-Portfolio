@@ -1,0 +1,114 @@
+---
+slug: uptime-monitoring-system
+title: Uptime Monitoring System
+category: BACKEND / OBSERVABILITY
+breadcrumbCategory: PROJECT / MONITORING SYSTEMS
+year: "2026"
+featured: true
+order: 2
+github: https://github.com/Arcohnix/Up-Time-Monitoring-System.git
+demo: null
+shortDescription: A service monitor that schedules asynchronous HTTP checks, records results, tracks incidents, and sends configured alerts.
+description: A Docker Compose monitoring stack with a FastAPI backend, React dashboard, PostgreSQL history, incident handling, and Prometheus/Grafana observability.
+technologies:
+  - Python
+  - FastAPI
+  - PostgreSQL
+  - React
+  - Docker Compose
+  - Prometheus / Grafana
+overview: |
+  The Uptime Monitoring System (UTMS) checks registered HTTP and HTTPS services on configurable intervals. Its asynchronous scheduler dispatches checks with per-service timeouts and bounded concurrency, then records check results and processes incident state transitions.
+
+  The project includes a React dashboard, REST API, PostgreSQL persistence with Alembic migrations, configurable email and webhook alert providers, Prometheus metrics, provisioned Grafana dashboards, and a separate watchdog container that monitors the backend heartbeat. The repository includes automated backend tests and a CI workflow; these do not establish production readiness or a measured performance guarantee.
+problemStatement: |
+  Teams need a consistent way to track endpoint availability, inspect historical check results, and distinguish an ongoing outage from a recovered service. UTMS brings scheduled probing, incident history, and alert delivery into a self-hosted monitoring stack.
+engineeringGoals:
+  - Run periodic HTTP and HTTPS probes without allowing one slow endpoint to block checks for other services.
+  - Persist check history and incident state for dashboard and API queries.
+  - Apply configurable failure and recovery thresholds before opening or resolving incidents.
+  - Deliver incident notifications through configurable email and webhook providers.
+  - Expose monitoring and API telemetry through Prometheus and Docker Compose services.
+architecture:
+  summary: A FastAPI service schedules asynchronous HTTP probes, persists results in PostgreSQL, evaluates incident transitions, and exposes data to a React dashboard, alert providers, and Prometheus.
+  nodes:
+    - name: Service Registry
+      role: Monitor Configuration
+      tech: FastAPI REST API
+      desc: Creates, lists, updates and deletes monitored services with check interval, timeout, expected status code and failure settings.
+    - name: Monitoring Scheduler
+      role: Periodic Probe Dispatch
+      tech: asyncio and httpx
+      desc: Selects active services when their configured interval is due and dispatches checks with bounded concurrency while avoiding overlapping checks for a service.
+    - name: Check Runner
+      role: Endpoint Health Evaluation
+      tech: Async HTTP requests
+      desc: Records response status and elapsed time, and captures timeout, connection and unexpected errors as structured check results.
+    - name: Result and Incident Store
+      role: History and Incident State
+      tech: PostgreSQL, SQLAlchemy and Alembic
+      desc: Persists check results and incident records for service history, summaries and incident queries.
+    - name: Incident and Alert Services
+      role: State Transitions and Notifications
+      tech: Threshold rules, SMTP and webhooks
+      desc: Processes consecutive failure and recovery outcomes and dispatches configured email or webhook notifications on incident transitions.
+    - name: Dashboard and Observability
+      role: Monitoring Views and Metrics
+      tech: React, Prometheus and Grafana
+      desc: Provides dashboard views for services and incidents, while the backend exposes application and monitoring metrics for Prometheus and Grafana.
+    - name: Watchdog
+      role: Backend Heartbeat Check
+      tech: Separate Docker container
+      desc: Probes the backend heartbeat endpoint and can send a configured webhook alert when its checks fail.
+workflowSteps:
+  - step: "01"
+    title: Register a Service
+    description: Add an HTTP or HTTPS endpoint with its check interval, timeout, expected status code and failure settings through the API or dashboard.
+  - step: "02"
+    title: Schedule an Asynchronous Probe
+    description: The scheduler selects active services when due and runs checks with bounded concurrency and a per-request timeout.
+  - step: "03"
+    title: Store the Check Result
+    description: Successful and failed outcomes are represented as structured results with status, latency, timestamp and error details, then persisted to PostgreSQL.
+  - step: "04"
+    title: Process Incident Transitions
+    description: Consecutive failure and recovery results are evaluated against service thresholds to open or resolve an incident.
+  - step: "05"
+    title: Notify and Observe
+    description: Configured email or webhook providers receive transition alerts; dashboard endpoints and Prometheus metrics expose service and system state.
+decisions:
+  - title: Isolate Endpoint Checks with Async Concurrency
+    decision: Use httpx asynchronous requests and a semaphore to bound concurrent probes.
+    why: A slow or failing endpoint can be handled without requiring checks to run one at a time.
+    tradeoff: Concurrency is bounded by configuration and available runtime resources; this does not establish a throughput guarantee.
+  - title: Use Consecutive Outcomes for Incident Transitions
+    decision: Evaluate configured failure and recovery thresholds before changing incident state.
+    why: Thresholds let the monitor wait for repeated outcomes before declaring a service down or recovered.
+    tradeoff: Detection and recovery depend on check intervals and configured thresholds, so incident state is not instantaneous.
+  - title: Keep Alert Delivery Behind Provider Interfaces
+    decision: Route incident notifications through separate email and webhook providers.
+    why: Probe and incident processing can use configured notification channels without embedding provider delivery in the HTTP check logic.
+    tradeoff: Delivery requires valid provider configuration and can fail independently of check processing.
+challenges:
+  - title: Slow and Unreachable Endpoints
+    scenario: An endpoint may time out, refuse a connection or return an unexpected status code.
+    risk: An unhandled request failure could disrupt the monitoring cycle or hide the reason for a failed check.
+    mitigation: The check runner converts timeout, network and unexpected errors into structured failed results, and the concurrent check path isolates individual outcomes.
+  - title: Noisy State Changes
+    scenario: A single failed request may not indicate a sustained outage, and a single success may not mean recovery.
+    risk: Immediate state transitions can generate repeated outage and recovery notifications.
+    mitigation: The incident manager evaluates consecutive failure and recovery outcomes using configured thresholds.
+  - title: Monitoring the Monitoring Worker
+    scenario: The API may be responsive while its background scheduler is stopped or its heartbeat is stale.
+    risk: Service checks could stop without the dashboard alone making the worker failure clear.
+    mitigation: A separate watchdog container probes the heartbeat endpoint and can send a configured webhook alert.
+lessons:
+  - title: Check results and incident state serve different purposes
+    content: Persisted probe outcomes provide a history of observations, while incident records represent threshold-driven outage and recovery periods.
+  - title: Scheduling policy is part of monitoring behavior
+    content: Check intervals, request timeouts, concurrency limits and failure thresholds determine how quickly the system observes a change and how much work it dispatches.
+  - title: Observability needs to include the worker
+    content: The backend exposes scheduler heartbeat state, and the separate watchdog gives the monitoring process an independent health check.
+---
+
+The repository also includes a Docker Compose deployment definition, database migrations, backend tests, and a GitHub Actions workflow. No benchmark result is claimed here.

@@ -1,0 +1,104 @@
+---
+slug: forge-gym
+title: ForgeGym Workout Tracker
+category: MOBILE / ANDROID
+breadcrumbCategory: PROJECT / ANDROID APPLICATIONS
+year: "2026"
+featured: false
+order: 6
+github: https://github.com/Arcohnix/Gym-Workout-Tracker-android-application.git
+demo: null
+shortDescription: An Android training journal for creating workout routines, recording sets and sessions, and reviewing training history.
+description: A Kotlin and Jetpack Compose workout tracker with Room-backed records, configurable progression recommendations, and data export tools.
+technologies:
+  - Kotlin
+  - Android
+  - Jetpack Compose
+  - Room
+  - Hilt
+screenshots:
+  - src: /images/forge-gym/dashboard.jpg
+    alt: ForgeGym dashboard with weekly goal, streak, training load, and a workout card.
+    caption: Dashboard overview with weekly goal, streak, training load and a shortcut to start a workout.
+  - src: /images/forge-gym/exercise-library.jpg
+    alt: ForgeGym exercise library showing search and a list of exercises.
+    caption: Searchable exercise library with muscle group and equipment labels.
+  - src: /images/forge-gym/workout-builder.jpg
+    alt: ForgeGym new workout screen before exercises are added.
+    caption: Workout builder for naming a routine and adding exercises.
+  - src: /images/forge-gym/active-session.jpg
+    alt: ForgeGym active workout session with set logging controls.
+    caption: Active session screen for entering weight and repetitions and completing a set.
+  - src: /images/forge-gym/workout-summary.jpg
+    alt: ForgeGym completed workout summary with duration, volume, sets, and exercise log.
+    caption: Session summary with recorded volume, set count, and workout log.
+overview: |
+  ForgeGym is an Android training journal for managing workout routines and tracking completed sessions. Users can record sets with weight and repetitions, pause or resume an active session, use a rest timer, and review training history and progress summaries.
+
+  The application stores workout and session records in a Room database. Progression recommendations are calculated from prior performance using user-selected strategies and one-rep-max formulas; they are deterministic application logic rather than machine-learning predictions. The app also includes JSON backup import/export and CSV history export.
+problemStatement: |
+  Workout tracking needs to connect routine setup, in-session logging, and later review without making training data dependent on a network connection. ForgeGym brings those tasks into one Android application with local persistence.
+engineeringGoals:
+  - Organize the Android app around UI, ViewModel, repository, and local data layers.
+  - Persist workout plans, active and completed sessions, set records, and personal records with Room.
+  - Provide configurable, rule-based progression recommendations and training history views.
+  - Support JSON backup and CSV history export from the application.
+architecture:
+  summary: A Jetpack Compose interface sends events to ViewModels, which use repositories to coordinate Room-backed workout data and DataStore preferences.
+  nodes:
+    - name: Compose Application UI
+      role: Screens and user interaction
+      tech: Jetpack Compose and Material 3
+      desc: Provides workout, session, exercise library, history, progress, profile and settings screens.
+    - name: ViewModels
+      role: UI state and event handling
+      tech: Kotlin Coroutines and StateFlow
+      desc: Exposes screen state and handles actions such as logging sets, changing exercises, pausing sessions and finishing workouts.
+    - name: Repository Layer
+      role: Application data operations
+      tech: Kotlin repositories
+      desc: Coordinates workout, exercise, session, profile, progress and backup operations for the ViewModels.
+    - name: Local Persistence
+      role: Workout data and preferences
+      tech: Room SQLite and Jetpack DataStore
+      desc: Stores workout templates, exercises, completed sets, sessions, personal records and user preferences on device.
+    - name: Backup and Export
+      role: User-managed data portability
+      tech: Kotlinx Serialization JSON and CSV
+      desc: Encodes backup data as JSON, restores supported records in a Room transaction, and exports completed workout history as CSV.
+workflowSteps:
+  - step: "01"
+    title: Build a Workout Routine
+    description: Create and organize workouts from the exercise library, including exercise order and rest-time settings.
+  - step: "02"
+    title: Track a Training Session
+    description: Start a session, record set weights and repetitions, move between exercises, and pause or finish the session.
+  - step: "03"
+    title: Review Training Data
+    description: Browse workout history, personal records, progress summaries and chart-based analytics.
+  - step: "04"
+    title: Use Progression Guidance
+    description: View weight and repetition suggestions calculated from previous performance and the selected progression strategy.
+  - step: "05"
+    title: Export a Copy of the Data
+    description: Create a JSON backup or export completed session history as CSV.
+decisions:
+  - title: Keep Workout Records in a Local Room Database
+    decision: Store workout plans, sessions and set records using Room, with DataStore for preferences.
+    why: The app can manage training records locally without requiring a remote service for its core tracking flow.
+    tradeoff: The repository does not implement account-based or server synchronization, so data portability relies on the available backup and export features.
+  - title: Calculate Progression Suggestions with Explicit Rules
+    decision: Use selectable progression strategies and one-rep-max formulas to calculate recommendations from recorded performance.
+    why: The recommendation path is deterministic and its calculation rules are represented directly in the application code.
+    tradeoff: Recommendations depend on the user's logged data and configured strategy; they are not a trained model or a guarantee of training outcomes.
+challenges: []
+lessons:
+  - title: Active sessions need persisted state
+    content: Storing an unfinished session and its completed sets in the local database allows the application to observe an active workout after the screen state changes.
+  - title: Recommendations should be described by their method
+    content: ForgeGym computes progression suggestions with explicit formulas and strategies, so they should be understood as rule-based guidance rather than learned predictions.
+  - title: Export supports user-managed portability
+    content: JSON backup and CSV history export give users ways to take copies of their training records without implying cloud synchronization.
+---
+
+ForgeGym is an Android application built with Kotlin and Jetpack Compose. Its manifest declares vibration permission and does not declare internet permission; the repository includes unit tests for progression and one-rep-max calculations.

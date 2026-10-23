@@ -1,0 +1,97 @@
+---
+title: "State Machines & Deterministic Routing in Agentic Systems"
+slug: "state-and-agentic-workflows"
+description: "Moving beyond fragile single-prompt chains: how explicit state graphs, conditional edges, and typed tool contracts make autonomous agents predictable in security and infrastructure operations."
+date: "2025-03-01"
+category: "EXPERIMENTS"
+readingTime: "7 min"
+featured: false
+tags:
+  - "Agents"
+  - "LangGraph"
+  - "State Machines"
+  - "Security"
+  - "Automation"
+relatedProject:
+  slug: "agentic-soc"
+  title: "Agentic SOC"
+---
+
+## The Fragility of Unbounded LLM Chains
+
+Early autonomous agent architectures relied on infinite loops where an LLM decided its next action via freeform JSON or ReAct text outputs. In demo environments, this looks impressive; in production security and infrastructure operations, it reliably fails.
+
+Common failure patterns in unbounded agent loops include:
+- **Infinite Reasoning Cycles**: The model oscillates between two diagnostic commands without converging on an action.
+- **Hallucinated Parameters**: Generating syntactically valid tool arguments that violate internal API contracts.
+- **Context Poisoning**: As error stack traces accumulate in the conversation window, the model's reasoning degradates exponentially.
+
+To run agents safely in operational environments, autonomy must be bounded by **deterministic state graphs**.
+
+## Designing Workflows as Directed State Graphs
+
+Rather than letting the model dictate execution arbitrary control flow, we model the system as a directed graph where nodes are explicit execution handlers and edges represent typed transition conditions:
+
+```
+[Packet Ingestion]
+        │
+        ▼
+[Graph Anomaly Model]
+   │             │
+(Clean)       (Anomaly Detected)
+   │             ▼
+[Log & Exit]  [LLM Analysis & Diagnosis Node]
+                 │
+                 ▼
+          {Conditional Edge}
+            ├── Low Confidence ──> [Escalate to Human Alert]
+            └── High Confidence ──> [Deterministic Firewall Mitigation]
+```
+
+## Bounding Agent State
+
+In state-driven architectures (such as LangGraph), every node receives a strictly typed state dictionary and returns an explicit mutation:
+
+```typescript
+export interface IncidentState {
+  incidentId: string;
+  sourceIp: string;
+  anomalyScore: number;
+  extractedFeatures: Record<string, unknown>;
+  toolHistory: string[];
+  iterationCount: number;
+  verdict: "BENIGN" | "SUSPICIOUS" | "MALICIOUS" | "UNKNOWN";
+  mitigationApplied: boolean;
+}
+
+export function shouldContinue(state: IncidentState): "mitigate" | "escalate" | "complete" {
+  // Hard execution bound preventing runaway loops
+  if (state.iterationCount >= 3) {
+    return "escalate";
+  }
+
+  if (state.verdict === "MALICIOUS" && state.anomalyScore > 0.85) {
+    return "mitigate";
+  }
+
+  if (state.verdict === "SUSPICIOUS") {
+    return "escalate";
+  }
+
+  return "complete";
+}
+```
+
+By enforcing `iterationCount` ceiling limits in the deterministic code layer rather than prompting the model to *"please stop after 3 tries"*, runaway token consumption and cascading failures become mathematically impossible.
+
+## Typed Tool Calling Contracts
+
+When an agent needs to execute an operational command (e.g. updating an IP blocklist or restarting a pod), the tool interface must be strictly validated using schema validators like Zod or Pydantic:
+
+- The LLM only emits parameter arguments matching a JSON schema.
+- The runtime validates types, network boundaries, and permissions before invocation.
+- The tool return value is scrubbed and condensed before re-entering the agent context.
+
+## Summary
+
+The true power of modern AI systems comes not from giving models unchecked autonomy, but from wrapping them in solid distributed systems principles: finite state machines, explicit typed contracts, hard circuit breakers, and human-in-the-loop escalation paths.

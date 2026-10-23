@@ -1,0 +1,111 @@
+---
+slug: text-to-sql-engine
+title: Text-to-SQL Engine
+category: AI / DATA
+breadcrumbCategory: PROJECT / AI & DATABASE SYSTEMS
+year: "2024"
+featured: false
+order: 5
+github: https://github.com/Arcohnix/Text-to-SQL-Engine---Local-LLM.git
+demo: null
+shortDescription: A natural language interface that converts plain-English database questions into validated, executable SQL queries against relational schemas.
+description: Schema-aware translation pipeline coupling local LLM inference with AST syntax validation and read-only database execution guardrails.
+technologies:
+  - Python
+  - SQL
+  - Ollama
+  - FastAPI
+  - SQLite / PostgreSQL
+overview: |
+  Business stakeholders frequently require ad-hoc analytical queries locked inside transactional relational databases. Engineering teams end up acting as manual query interpreters. This system converts plain-English questions into verified SQL queries, executing them safely against read-only database connections.
+problemStatement: |
+  Vanilla LLMs frequently hallucinate column names, fabricate non-existent tables, or generate destructive queries (`UPDATE`, `DROP`, `DELETE`). Allowing unvalidated LLM output to execute against a live database presents severe security and data integrity risks.
+engineeringGoals:
+  - Extract and inject minimal, schema-compact context into the model prompt to prevent context dilution.
+  - Parse generated queries through an Abstract Syntax Tree (AST) validator to enforce read-only execution.
+  - Execute queries inside sandboxed, timeout-bounded database transactions with tabular result serialization.
+architecture:
+  summary: Pipeline extracting relational schemas, synthesizing SQL through local models, verifying syntax via AST inspection, and streaming read-only results.
+  nodes:
+    - name: User Query Ingress
+      role: Question Ingest
+      tech: FastAPI Endpoint
+      desc: Receives natural-language questions and checks intent classification.
+    - name: Schema Extractor
+      role: Context Builder
+      tech: Information Schema / DDL
+      desc: Prunes and serializes relevant table schemas, foreign keys, and column types.
+    - name: Local Model Engine
+      role: SQL Generation
+      tech: Ollama (DeepSeek-Coder)
+      desc: Generates ANSI SQL matching query intent based on provided DDL context.
+    - name: AST Syntax Guardrail
+      role: Validation & Safety
+      tech: SQLGlot / AST Parser
+      desc: Inspects AST tokens to verify read-only safety, enforcing strict SELECT-only policies.
+    - name: Sandboxed Executor
+      role: Database Execution
+      tech: Read-Only Connection Pool
+      desc: Executes validated query with a strict 3-second timeout and returns structured tabular records.
+workflowSteps:
+  - step: "01"
+    title: Question Reception & Intent Validation
+    description: User submits a natural-language question. The API verifies whether the intent relates to database analytics.
+  - step: "02"
+    title: Schema Serialization & Prompt Injection
+    description: Relevant table definitions, constraints, and sample value distributions are packaged into a structured system prompt.
+  - step: "03"
+    title: Local Model Query Generation
+    description: A specialized code model running locally through Ollama generates the candidate SQL query along with brief reasoning.
+  - step: "04"
+    title: AST Syntax & Safety Verification
+    description: The SQL string is parsed into an AST. Any mutating expression (INSERT, UPDATE, DROP, ALTER) immediately aborts execution.
+  - step: "05"
+    title: Read-Only Sandboxed Execution
+    description: The verified query runs against a replica database with read-only permissions and row-limit ceilings, streaming data back to the client.
+decisions:
+  - title: AST Parser Validation over Regex Keyword Checking
+    decision: Used an Abstract Syntax Tree (AST) parser rather than naive regex keyword matching.
+    why: Regex filters can be bypassed using subqueries, string literals containing keywords, or SQL dialect tricks. AST parsing evaluates grammatical query structure deterministically.
+    tradeoff: Adds an AST parsing step and requires maintaining dialect grammar support.
+  - title: Local DeepSeek-Coder over Cloud Models
+    decision: Ran specialized local code generation models via Ollama rather than sending proprietary relational schemas to third-party APIs.
+    why: Enterprise database schemas frequently reveal proprietary business logic, sensitive column labels, and internal data structures.
+    tradeoff: Requires dedicated local GPU memory and bounded prompt context sizes.
+challenges:
+  - title: Complex Multi-Table Join Hallucination
+    scenario: When queried across multiple entities, the model sometimes hallucinated foreign keys that did not exist.
+    risk: Database query execution errors or misleading cross-product table scans.
+    mitigation: Built an explicit schema graph validator that verifies every join clause against foreign-key metadata before execution.
+  - title: Expensive Table Scans Crashing the Database
+    scenario: Unbounded user queries (`SELECT * FROM logs`) generated memory spikes on the database replica.
+    risk: High CPU utilization degrading performance for other analytical users.
+    mitigation: Automatically injected `LIMIT 100` clauses into all generated SELECT statements at the AST level.
+codeSnippet:
+  title: AST Read-Only Safety Guardrail
+  language: python
+  caption: Enforces SELECT-only operations and prevents SQL mutation attempts.
+  code: |
+    import sqlglot
+    from sqlglot import exp
+
+    def validate_readonly_query(sql_string: str) -> str:
+        expression = sqlglot.parse_one(sql_string)
+
+        # Enforce that root expression is strictly SELECT
+        if not isinstance(expression, exp.Select):
+            raise SecurityException("Mutating queries (INSERT, UPDATE, DROP) are strictly prohibited.")
+
+        # Ensure query contains a LIMIT clause to prevent unbounded scans
+        if not expression.args.get("limit"):
+            expression = expression.limit(100)
+
+        return expression.sql()
+lessons:
+  - title: Security must be structural, not conversational
+    content: Prompt engineering ('please do not delete data') is never a security boundary. Hard AST parsing and read-only database credentials provide deterministic safety.
+  - title: Schema clarity directly determines translation accuracy
+    content: Descriptive foreign key constraints and clear column naming within DDL schemas improve model SQL generation accuracy far more than complex system prompt instructions.
+---
+
+Detailed query benchmarks and schema translation test suites will be expanded in the next iteration.

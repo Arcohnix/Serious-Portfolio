@@ -1,0 +1,86 @@
+---
+slug: resilient-order-processing
+title: Resilient Order Processing System
+category: DISTRIBUTED SYSTEMS
+breadcrumbCategory: PROJECT / BACKEND & DISTRIBUTED SYSTEMS
+year: "2024"
+featured: true
+order: 1
+github: https://github.com/Arcohnix/resilient-order-processing-system.git
+demo: null
+shortDescription: An order processing system using persistent idempotency, a polling outbox, payment resilience and recovery.
+description: A Spring Boot order processing system that combines PostgreSQL transactions, a polling outbox, duplicate-tolerant Kafka consumption and payment failure recovery.
+technologies:
+  - Kafka
+  - Spring Boot
+  - PostgreSQL
+  - Docker
+overview: |
+  Order processing must coordinate database state, payment outcomes and event delivery across failure boundaries. This system records order state and an outbox event in a PostgreSQL transaction, then publishes pending events to Kafka through a scheduled polling publisher. Persistent idempotency and explicit payment recovery address duplicate requests and orphaned successful payments.
+problemStatement: |
+  Writing to a database and a message broker as separate operations can leave order state and event delivery out of sync. Payment failures and interruptions after a successful payment can also leave work that needs to be retried or recovered.
+engineeringGoals:
+  - Record order state and its event in one PostgreSQL transaction, then publish the event through a polling outbox.
+  - Make repeated API requests and duplicate Kafka event delivery safe through persistent idempotency checks.
+  - Handle payment failures with retries, a circuit breaker, a timeout and an explicit recovery path for successful payments without a finalized order.
+architecture:
+  summary: Spring Boot order processing with a PostgreSQL transactional outbox, scheduled Kafka publishing, duplicate-tolerant consumption and a separate payment resilience and recovery flow.
+  nodes:
+    - name: API Ingress
+      role: REST API
+      tech: Spring Boot REST
+      desc: Accepts REST requests and checks persisted idempotency keys so repeated requests return the same order.
+    - name: PostgreSQL Outbox
+      role: State & Event Log
+      tech: ACID Relational Ledger
+      desc: Persists order state, idempotency data and an outbox event within a local transaction.
+    - name: Scheduled Outbox Publisher
+      role: Event Dispatcher
+      tech: Polling Outbox
+      desc: Polls pending outbox events with a five-second delay between runs and publishes them to Kafka.
+    - name: Kafka
+      role: Event Stream
+      tech: order-events topic
+      desc: Receives published order events with eventId as the producer key.
+    - name: Order Event Consumer
+      role: Event Consumer
+      tech: Processed Event Ledger
+      desc: Checks processed event IDs so duplicate event delivery is ignored.
+    - name: Payment Recovery
+      role: Recovery Path
+      tech: RecoveryService
+      desc: Finds successful payments without a corresponding order and supports recovery through API endpoints.
+workflowSteps:
+  - step: "01"
+    title: Ingress & Idempotency Check
+    description: A client submits an Idempotency-Key. The persisted unique key lets repeated requests return the same order instead of creating another one.
+  - step: "02"
+    title: Atomic Outbox Persistence
+    description: The service records order state, the idempotency key and an outbox event in PostgreSQL within a local transaction.
+  - step: "03"
+    title: Asynchronous Event Dispatch
+    description: A scheduled publisher polls pending outbox events with a five-second delay between runs and publishes them to the order-events Kafka topic using eventId as the producer key.
+  - step: "04"
+    title: Idempotent Consumer Processing
+    description: The consumer checks the processed-event ledger and ignores event IDs it has already handled, making processing tolerant of duplicate delivery.
+  - step: "05"
+    title: Payment Resilience & Recovery
+    description: Payment processing uses retries with exponential backoff, a circuit breaker and a three-second timeout. A recovery service identifies successful payments without a corresponding order and provides endpoints to recover them.
+decisions:
+  - title: Transactional Outbox vs Two-Phase Commit (2PC)
+    decision: Stored outbox events in PostgreSQL and used a scheduled publisher to poll and publish pending events to Kafka.
+    why: The order state and event can be recorded in the same local database transaction before asynchronous publication.
+    tradeoff: The implementation uses periodic polling; the publisher checks for pending events with a five-second delay between runs.
+challenges:
+  - title: Interruption After Successful Payment
+    scenario: An interruption after payment succeeds but before order processing is finalized can leave a successful payment without its corresponding order.
+    risk: The order flow may not have completed even though the payment succeeded.
+    mitigation: A recovery service identifies successful payments without a corresponding order and supports creating a PAID order through recovery endpoints.
+lessons:
+  - title: Idempotency must be foundational
+    content: Persisted API idempotency keys return the same order for repeated requests, while the processed-event ledger makes Kafka consumption tolerant of duplicate event delivery.
+  - title: Payment failures need explicit handling
+    content: Retries with exponential backoff, a circuit breaker and a timeout limit the payment flow's exposure to repeated failures. Recovery handles successful payments that lack a corresponding order.
+---
+
+The project also exposes application metrics through Micrometer and Spring Actuator, with Prometheus and Grafana included in the Docker Compose setup.

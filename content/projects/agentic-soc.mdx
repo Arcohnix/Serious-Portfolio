@@ -1,0 +1,99 @@
+---
+slug: agentic-soc
+title: Agentic Security Operations Center
+category: AI / SECURITY
+breadcrumbCategory: PROJECT / AI & CYBERSECURITY
+year: "2024"
+featured: false
+order: 4
+github: https://github.com/Arcohnix/Agentic-Security-Operation-Centre.git
+demo: null
+shortDescription: A container-based security monitoring prototype exploring flow aggregation, graph representations, heuristic scoring and Linux firewall actions.
+description: An experimental security monitoring system that combines configured-interface Scapy capture, connection flows, sliding-window IP graphs and prototype threat scoring with container-scoped iptables actions.
+technologies:
+  - Python
+  - Scapy
+  - NumPy
+  - Docker
+  - iptables
+overview: |
+  This project explores how network activity can be represented as connections between IP addresses and processed by a layered monitoring pipeline. In the Docker setup, Scapy captures traffic on a configured interface and an Nginx access-log tailer provides HTTP request records. A flow tracker aggregates captured packets by source and destination IP, ports and protocol; the graph builder represents active IPs and directed connections over a sliding connection window.
+
+  Experimental GraphSAGE/GAT, DNN and temporal scoring layers feed a governance and response pipeline. The live bridge analyzes batches on a five-second cycle and updates a dashboard with graph and event state. The scoring layers are implemented with NumPy and run without trained or validated model weights, so their outputs are heuristic prototype results. When available, the response path can add Linux iptables rules inside the governance container; if iptables is unavailable, blocking is logged only.
+problemStatement: |
+  Security monitoring involves interpreting many network connections across hosts, while individual events can omit useful relationship context. This project uses an experimental graph representation and combines several prototype scoring signals to explore a network-monitoring workflow.
+
+  The response path also provides a way to exercise containment actions within a configured Docker environment. Its behavior is bounded by the traffic visible to the configured capture source and the firewall capabilities available inside the governance container.
+engineeringGoals:
+  - Explore graph-based representations of network activity using IP nodes and directed connection edges.
+  - Prototype anomaly scoring over connection graphs and combine it with behavioral and temporal signals.
+  - Experiment with governance checks and automated containment actions in a locally runnable Docker environment.
+  - Surface graph and threat-event state through a monitoring dashboard.
+architecture:
+  summary: Configured-interface packet capture and HTTP access logs feed prototype flow records, a sliding-window IP graph, experimental scoring layers, response selection, container-scoped iptables actions and dashboard state.
+  nodes:
+    - name: Network and HTTP Inputs
+      role: Ingestion
+      tech: Scapy and Nginx access logs
+      desc: Captures packets on the configured interface when Scapy is available and tails the target container's Nginx access log. Visibility depends on the configured environment; packet capture falls back to /proc/net connection polling if Scapy capture fails.
+    - name: Flow Tracker
+      role: Prototype Flow Aggregation
+      tech: Python connection records
+      desc: Groups captured packets by source and destination IP, ports and protocol, then emits connection records for analysis. HTTP log entries are converted to connection records as well.
+    - name: Sliding-Window Graph
+      role: Topology Representation
+      tech: IP nodes and dense NumPy adjacency matrix
+      desc: Builds graph inputs from IP nodes and directed connections in a sliding connection window.
+    - name: Experimental Scoring
+      role: Anomaly and Severity Signals
+      tech: Custom NumPy GraphSAGE/GAT, DNN and temporal layers
+      desc: Produces graph, behavioral and temporal scores that are combined into a fused score and severity label. Model weights are not trained or validated in the live bridge; treat the outputs as heuristics.
+    - name: Governance and Response
+      role: Prototype Action Selection
+      tech: MonitoringAgent, ThreatAnalysisAgent, ResponseCoordAgent and GovernanceAgent
+      desc: Applies rule-based threat analysis and governance checks. ResponseCoordAgent selects prototype actions using an epsilon-greedy policy over a seeded Q-table.
+    - name: IP Blocker
+      role: Container-Scoped Containment
+      tech: Linux iptables
+      desc: Adds source-address DROP rules to the governance container's INPUT chain when iptables is available; otherwise records blocking as log-only.
+    - name: Monitoring Dashboard
+      role: Event and Graph State
+      tech: Python HTTP server
+      desc: Displays connection graph and threat-event state for the configured monitoring environment.
+workflowSteps:
+  - step: "01"
+    title: Collect Configured Network Inputs
+    description: Scapy captures packets on the configured interface, while a separate tailer reads the target container's Nginx access log. If Scapy capture fails, the packet bridge falls back to polling /proc/net connection tables.
+  - step: "02"
+    title: Aggregate Connection Records
+    description: FlowTracker groups captured packets by source and destination IP, ports and protocol and emits connection records after its flow timeout. HTTP access-log entries are also converted into connection records.
+  - step: "03"
+    title: Build the Sliding-Window Graph
+    description: The graph builder uses IP addresses as nodes and directed connections as edges, constructing node features and a dense adjacency matrix from its sliding connection window.
+  - step: "04"
+    title: Calculate Experimental Scores
+    description: Custom NumPy GraphSAGE/GAT, DNN and temporal layers produce prototype scores that are combined into a fused score and severity. The live pipeline does not load trained, validated model weights, so these values are heuristic outputs rather than demonstrated detection accuracy.
+  - step: "05"
+    title: Review Events and Exercise Containment
+    description: The governance and response components process events during a five-second analysis cycle and update dashboard state. The bridge can apply source-address iptables rules inside the governance container through automatic or action-driven paths; if iptables is unavailable, it logs the attempted block.
+decisions:
+  - title: Represent Connections as an IP Graph
+    decision: Build graph inputs with IP nodes, directed connection edges and a sliding connection window.
+    why: This representation makes host-to-host relationships available to the prototype scoring pipeline.
+    tradeoff: The implemented scoring layers are experimental and unvalidated; graph representation alone does not establish detection quality.
+  - title: Keep Containment Within the Configured Container
+    decision: Use an IPBlocker that applies Linux iptables source-address rules inside the governance container when available.
+    why: The Docker setup gives the governance service the network capabilities needed to exercise those rules in its configured environment.
+    tradeoff: The rules target the governance container's INPUT chain and do not demonstrate host-level or target-container protection. If iptables is unavailable, the blocker logs the attempt without applying a rule.
+lessons:
+  - title: Graph inputs make relationships explicit
+    content: Representing IPs and directed connections as a graph makes those relationships available to the scoring pipeline. Whether that improves detection must be established through model validation.
+  - title: Heuristic scores need validation
+    content: A fused score and severity label are outputs of the prototype pipeline, not calibrated confidence or evidence of detection accuracy. The model layers need validation before their scores can be treated as detector results.
+  - title: Separate detection, scoring and response
+    content: The pipeline has distinct graph, scoring, governance and response components. Their outputs and actions should be interpreted according to what each component actually implements.
+  - title: Containment scope matters
+    content: An iptables rule applied inside the governance container is different from host-level or production-network mitigation. Response behavior also depends on the configured environment and firewall availability.
+---
+
+Future work: document the graph parameter choices and provide walkthroughs for the synthetic traffic scenarios already represented in the repository.

@@ -1,0 +1,248 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --background: #fafafa;
+    --surface-1: #ffffff;
+    --surface-2: #f4f4f5;
+    --surface-3: #e4e4e7;
+    --foreground: #09090b;
+    --foreground-secondary: #52525b;
+    --foreground-muted: #71717a;
+    --border: rgba(0, 0, 0, 0.08);
+    --border-subtle: rgba(0, 0, 0, 0.04);
+    --border-hover: rgba(0, 0, 0, 0.15);
+    
+    --accent-red: #c0394b;
+    --accent-purple: #79529e;
+    --accent-blue: #3b6998;
+    --accent-muted: rgba(0, 0, 0, 0.05);
+
+    --navbar-bg: rgba(255, 255, 255, 0.72);
+    --navbar-border: rgba(0, 0, 0, 0.07);
+    --navbar-bg-scrolled: rgba(255, 255, 255, 0.88);
+    --navbar-border-scrolled: rgba(0, 0, 0, 0.12);
+  }
+
+  .dark {
+    --background: #050507;
+    --surface-1: #0e0e11;
+    --surface-2: #18181b;
+    --surface-3: #222226;
+    --foreground: #f4f4f5;
+    --foreground-secondary: #a1a1aa;
+    --foreground-muted: #71717a;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-subtle: rgba(255, 255, 255, 0.04);
+    --border-hover: rgba(255, 255, 255, 0.16);
+
+    --accent-red: rgba(224, 86, 96, 0.85);
+    --accent-purple: rgba(168, 130, 204, 0.85);
+    --accent-blue: rgba(120, 160, 220, 0.85);
+    --accent-muted: rgba(255, 255, 255, 0.05);
+
+    --navbar-bg: rgba(17, 17, 19, 0.55);
+    --navbar-border: rgba(255, 255, 255, 0.06);
+    --navbar-bg-scrolled: rgba(9, 9, 11, 0.82);
+    --navbar-border-scrolled: rgba(255, 255, 255, 0.12);
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: light dark;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Accessibility Focus Ring */
+:focus-visible {
+  outline: 2px solid var(--foreground-secondary);
+  outline-offset: 3px;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-hover);
+}
+
+/* Selection */
+::selection {
+  background: rgba(168, 130, 204, 0.25);
+  color: var(--foreground);
+}
+
+/* Utility: Hide Scrollbar while keeping functionality */
+.scrollbar-none,
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Technology Icon Brand Colors - always visible & authentic */
+.tech-icon-container {
+  color: var(--brand-light, currentColor);
+}
+.dark .tech-icon-container {
+  color: var(--brand-dark, currentColor);
+}
+
+/* Atmospheric Multi-Color Movement Keyframes - Fast, Fluid, Organic */
+@keyframes drift-purple {
+  0% {
+    transform: translate3d(-10vw, -8vh, 0) scale(1) rotate(0deg);
+  }
+  30% {
+    transform: translate3d(6vw, 4vh, 0) scale(1.15) rotate(5deg);
+  }
+  65% {
+    transform: translate3d(18vw, -5vh, 0) scale(0.92) rotate(-4deg);
+  }
+  100% {
+    transform: translate3d(-10vw, -8vh, 0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes drift-blue {
+  0% {
+    transform: translate3d(12vw, 4vh, 0) scale(1) rotate(0deg);
+  }
+  35% {
+    transform: translate3d(-4vw, -2vh, 0) scale(1.18) rotate(-7deg);
+  }
+  70% {
+    transform: translate3d(-16vw, 10vh, 0) scale(0.9) rotate(6deg);
+  }
+  100% {
+    transform: translate3d(12vw, 4vh, 0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes drift-red {
+  0% {
+    transform: translate3d(14vw, 10vh, 0) scale(1) rotate(0deg);
+  }
+  40% {
+    transform: translate3d(-3vw, -4vh, 0) scale(1.2) rotate(8deg);
+  }
+  75% {
+    transform: translate3d(-14vw, 6vh, 0) scale(0.92) rotate(-5deg);
+  }
+  100% {
+    transform: translate3d(14vw, 10vh, 0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes drift-purple-secondary {
+  0% {
+    transform: translate3d(6vw, 12vh, 0) scale(0.9) rotate(-4deg);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translate3d(-8vw, 2vh, 0) scale(1.15) rotate(6deg);
+    opacity: 0.90;
+  }
+  100% {
+    transform: translate3d(6vw, 12vh, 0) scale(0.9) rotate(-4deg);
+    opacity: 0.65;
+  }
+}
+
+@keyframes drift-blue-secondary {
+  0% {
+    transform: translate3d(-6vw, 14vh, 0) scale(1) rotate(5deg);
+    opacity: 0.60;
+  }
+  50% {
+    transform: translate3d(8vw, 6vh, 0) scale(1.12) rotate(-5deg);
+    opacity: 0.88;
+  }
+  100% {
+    transform: translate3d(-6vw, 14vh, 0) scale(1) rotate(5deg);
+    opacity: 0.60;
+  }
+}
+
+@keyframes drift-white {
+  0%, 100% {
+    opacity: 0.05;
+    transform: translate3d(-4vw, -2vh, 0) scale(0.9);
+  }
+  50% {
+    opacity: 0.22;
+    transform: translate3d(3vw, 3vh, 0) scale(1.18);
+  }
+}
+
+.animate-drift-purple {
+  animation: drift-purple 18s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-drift-blue {
+  animation: drift-blue 22s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-drift-red {
+  animation: drift-red 16s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-drift-purple-sec {
+  animation: drift-purple-secondary 12s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-drift-blue-sec {
+  animation: drift-blue-secondary 14s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.animate-drift-white {
+  animation: drift-white 10s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-drift-purple,
+  .animate-drift-blue,
+  .animate-drift-red,
+  .animate-drift-purple-sec,
+  .animate-drift-blue-sec,
+  .animate-drift-white {
+    animation: none !important;
+  }
+}

@@ -1,0 +1,106 @@
+---
+slug: ai-knowledge-system
+title: AI Knowledge System
+category: AI / KNOWLEDGE SYSTEMS
+breadcrumbCategory: PROJECT / AI & ENTERPRISE SYSTEMS
+year: "2024"
+featured: true
+order: 3
+github: https://github.com/Arcohnix
+demo: null
+shortDescription: An internal knowledge assistant designed to help employees retrieve trustworthy, cited answers from company documentation.
+description: Enterprise hybrid-retrieval RAG architecture pairing dense vector search with sparse BM25 indexing, cross-encoder re-ranking, and grounded local inference.
+technologies:
+  - LLM
+  - RAG
+  - FastAPI
+  - Ollama
+  - ChromaDB
+overview: |
+  Engineers and support teams spend hours searching across fragmented, out-of-date documentation wikis. Generic LLMs hallucinate plausible-sounding procedural instructions that lead to production mistakes. This system was built to provide verified, grounded answers accompanied by verifiable document citations.
+problemStatement: |
+  Pure vector similarity searches often miss exact keyword codes, error IDs, and version numbers. Without strict grounding verification, generative models synthesize plausible but fabricated answers from incomplete context.
+engineeringGoals:
+  - Combine semantic vector retrieval with exact BM25 keyword matching using Reciprocal Rank Fusion (RRF).
+  - Implement a secondary cross-encoder re-ranking phase to filter low-relevance context chunks.
+  - Enforce strict citation requirements, rejecting answers that cannot be directly supported by retrieved context.
+architecture:
+  summary: Dual-stage hybrid retrieval pipeline combining dense vector embeddings with sparse BM25 indices, cross-encoder re-ranking, and citation-grounded LLM synthesis.
+  nodes:
+    - name: Ingestion & Parser
+      role: Document Preprocessing
+      tech: Markdown / PDF Chunker
+      desc: Extracts semantic markdown sections, preserves code syntax, and computes chunk hashes.
+    - name: Dense Vector Index
+      role: Semantic Search
+      tech: ChromaDB / Local Embeddings
+      desc: Indexes semantic embeddings to capture conceptual meaning and natural-language synonyms.
+    - name: Sparse BM25 Index
+      role: Keyword Search
+      tech: BM25 Okapi
+      desc: Indexes exact tokens, error codes, function names, and configuration keys.
+    - name: Cross-Encoder Re-ranker
+      role: Context Filtering
+      tech: Transformer Re-ranker
+      desc: Scores query-document pairs jointly to filter false positives before context assembly.
+    - name: Grounded Synthesizer
+      role: Local Generation
+      tech: Ollama Local LLM
+      desc: Generates concise answers referencing exact section citations and source links.
+workflowSteps:
+  - step: "01"
+    title: Document Chunking & Ingestion
+    description: Internal guides and specifications are normalized into structured chunks preserving section headings, metadata tags, and code blocks.
+  - step: "02"
+    title: Dual-Vector & Keyword Indexing
+    description: Each chunk is simultaneously converted into dense vector embeddings and registered into a sparse lexical inverted index.
+  - step: "03"
+    title: Hybrid Query & Rank Fusion
+    description: When a user query arrives, both indices execute in parallel. Results are merged and scored using Reciprocal Rank Fusion (RRF).
+  - step: "04"
+    title: Cross-Encoder Re-Ranking
+    description: The top 20 candidate chunks pass through a cross-encoder model that evaluates deep semantic relevance, pruning the context down to the top 4 chunks.
+  - step: "05"
+    title: Grounded Synthesis with Strict Citations
+    description: The model synthesizes the answer strictly using the provided context, appending clickable source references and refusing to extrapolate when facts are absent.
+decisions:
+  - title: Hybrid Retrieval (Dense + BM25) over Pure Vector Search
+    decision: Merged sparse BM25 indexing with dense semantic embeddings.
+    why: Vector embeddings frequently fail to retrieve exact error numbers (e.g. 'ERR_CONN_404') and specialized API methods, while BM25 guarantees exact keyword hits.
+    tradeoff: Requires maintaining two indices and running rank fusion scoring during query execution.
+  - title: Two-Stage Re-Ranking over Raw Top-K Selection
+    decision: Added a cross-encoder re-ranking step before assembling the LLM context window.
+    why: Bi-encoder retrieval is fast but imprecise. Cross-encoders accurately discard subtly irrelevant chunks that cause LLM distraction.
+    tradeoff: Adds approximately 60ms of latency per query during the re-ranking stage.
+challenges:
+  - title: Conflicting Information Across Document Versions
+    scenario: Legacy documentation files contained outdated configuration parameters that contradicted modern guidelines.
+    risk: The assistant generated deprecated commands alongside modern procedures.
+    mitigation: Incorporated document timestamp metadata and canonical version tagging into the re-ranker scoring formula.
+  - title: Hallucinated Citations
+    scenario: When context lacked explicit answers, the LLM hallucinated fictitious section numbers.
+    risk: Loss of engineer trust in generated answers.
+    mitigation: Built an automated post-generation verification step that validates whether cited section IDs exist in the retrieved context chunks.
+codeSnippet:
+  title: Reciprocal Rank Fusion & Grounded Prompt Assembly
+  language: python
+  caption: Hybrid search score merger and verified citation context builder.
+  code: |
+    def reciprocal_rank_fusion(dense_results, sparse_results, k=60):
+        scores = defaultdict(float)
+        for rank, doc_id in enumerate(dense_results):
+            scores[doc_id] += 1.0 / (k + rank + 1)
+        for rank, doc_id in enumerate(sparse_results):
+            scores[doc_id] += 1.0 / (k + rank + 1)
+
+        # Sort by merged relevance score
+        ranked_ids = sorted(scores.keys(), key=lambda x: scores[x], reverse=True)
+        return ranked_ids[:10]
+lessons:
+  - title: Retrieval quality dominates generative capability
+    content: A smaller model with clean, highly relevant context routinely outperforms a state-of-the-art model fed noisy or incomplete documentation chunks.
+  - title: Fast refusal is superior to plausible fabrication
+    content: In engineering systems, explicitly stating 'Documentation does not specify this SLA' builds far greater confidence than a plausible hallucination.
+---
+
+Detailed retrieval benchmarks and embedding comparisons will be added in the next iteration.

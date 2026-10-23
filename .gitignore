@@ -1,0 +1,11 @@
+node_modules/
+.next/
+out/
+.DS_Store
+*.log
+.env
+.env.local
+.env.*.local
+acceptance_screenshots/
+verification_screenshots/
+resume-drafts/
